@@ -2,46 +2,60 @@
 <html>
   <head>
     <title>My YouTube Tracker</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        padding: 20px;
-        margin: 0;
-        background-color: #f8f9fa;
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+      let player;
+      let watchTime = 0;
+      let watchStart = null;
+
+      const user = new URLSearchParams(window.location.search).get('user') || 'unknown';
+
+      function onYouTubeIframeAPIReady() {
+        player = new YT.Player('ytplayer', {
+          events: {
+            'onStateChange': onPlayerStateChange
+          }
+        });
       }
 
-      h1 {
-        text-align: center;
-        color: #333;
+      function onPlayerStateChange(event) {
+        if (event.data == YT.PlayerState.PLAYING) {
+          watchStart = new Date();
+        } else if (event.data == YT.PlayerState.PAUSED || event.data == YT.PlayerState.ENDED) {
+          if (watchStart) {
+            const now = new Date();
+            watchTime += Math.floor((now - watchStart) / 1000);
+            watchStart = null;
+          }
+        }
+
+        // if ENDED, send data
+        if (event.data == YT.PlayerState.ENDED) {
+          sendData();
+        }
       }
 
-      .video-container {
-        position: relative;
-        padding-bottom: 56.25%; /* 16:9 ratio */
-        height: 0;
-        overflow: hidden;
-        max-width: 100%;
-        margin: 0 auto;
+      function sendData() {
+        fetch('https://script.google.com/macros/s/AKfycbwYxB8hDXUGaHe16k3b-A_lD9jrZepvMI-rrp4dmjbczAunfE7eKc1b2a7ftOHPIgM/exec', {
+          method: 'POST',
+          body: JSON.stringify({
+            user: user,
+            timeWatched: watchTime
+          }),
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
       }
-
-      .video-container iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        border: 0;
-      }
-    </style>
+    </script>
   </head>
   <body>
     <h1>मेरो YouTube भिडियो</h1>
-    <div class="video-container">
-      <iframe 
-        src="https://www.youtube.com/embed/-blU88b5SmE?enablejsapi=1"
-        allowfullscreen>
-      </iframe>
-    </div>
+    <iframe id="ytplayer" width="100%" height="315" 
+      src="https://www.youtube.com/embed/-blU88b5SmE?enablejsapi=1" 
+      frameborder="0" allowfullscreen>
+    </iframe>
+
+    <script src="https://www.youtube.com/iframe_api"></script>
   </body>
 </html>
